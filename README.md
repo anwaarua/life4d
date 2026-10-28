@@ -1,6 +1,6 @@
 # Life4D: calibrated validity of stored 3D geometry across long observation gaps
 
-Code for the preprint (folder `life4d/` of github.com/anwaarua/AgenticAI) *"Seen, Exists, Valid: Calibrated Validity of Stored 3D Geometry Across Long Observation Gaps"* (A. Ulhaq, 2026).
+Code for the preprint *"Seen, Exists, Valid: Calibrated Validity of Stored 3D Geometry Across Long Observation Gaps"* (A. Ulhaq, 2026).
 
 ## Contents
 - `simulation/life4d_sim.py` – controlled study (Table 1, cross-site pooling). Runs in about 1 minute with NumPy only:
