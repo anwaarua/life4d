@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Life4D preliminary simulation study (FT270100174, v5).
+"""Life4D preliminary simulation study.
 
 Tests the core logic of validity-aware geometric memory on synthetic data
 with a KNOWN, deliberately misspecified generative model:
@@ -184,6 +184,39 @@ def metrics(p, y):
     return stale, falseret, stale + falseret, ece
 
 
+def last_llr(e, lik):
+    """log-likelihood ratio (valid vs changed) of the LAST observation before tq; None if never seen."""
+    last=None
+    for tt, o in zip(e["times"][1:], e["obs"]):
+        if tt > e["tq"]:
+            break
+        if o is not None:
+            last=o
+    if last is None:
+        return None
+    pres, resid = last
+    lv = (lik["pv"] if pres else 1 - lik["pv"]) * gauss(resid, lik["mv"], lik["sv"])
+    lc = (lik["pc"] if pres else 1 - lik["pc"]) * gauss(resid, lik["mc"], lik["sc"])
+    return np.log(lv + 1e-300) - np.log(lc + 1e-300)
+
+
+def feats(e, lik):
+    l = last_llr(e, lik)
+    return np.array([0.0 if l is None else np.clip(l, -30, 30), 1.0 if l is None else 0.0, 1.0])
+
+
+def fit_platt(train, lik):
+    X = np.array([feats(e, lik) for e in train]); y = np.array([e["valid"] for e in train], float)
+    w = np.zeros(X.shape[1])
+    for _ in range(3000):
+        p = 1 / (1 + np.exp(-X @ w)); w -= 0.05 * X.T @ (p - y) / len(y)
+    return w
+
+
+def platt_pred(e, lik, w):
+    return 1 / (1 + np.exp(-feats(e, lik) @ w))
+
+
 def run_seed(seed):
     rng = np.random.default_rng(seed)
     ents = simulate(rng)
@@ -194,12 +227,16 @@ def run_seed(seed):
     lam_c = {c: fit_rate([interval_labels(e) for e in train if e["c"] == c]) for c in CLASSES}
     lam_g = fit_rate([presence_intervals(e) for e in train])
     lik = fit_lik(train)
+    lam_all = fit_rate([interval_labels(e) for e in train])
+    wpl = fit_platt(train, lik)
     y = [e["valid"] for e in test]
     out = {
         "Overwrite": metrics([last_obs(e, True) for e in test], y),
         "Last observation": metrics([last_obs(e) for e in test], y),
         "Presence filter": metrics([filt(e, lam_g, presence_only=True) for e in test], y),
         "Life4D-style": metrics([filt(e, lam_c[e["c"]], lik) for e in test], y),
+        "CalibratedLast": metrics([platt_pred(e, lik, wpl) for e in test], y),
+        "GlobalRate": metrics([filt(e, lam_all, lik) for e in test], y),
     }
     # comparative anchoring: sparse sites (2 epochs), per-site vs pooled class rate
     sparse = simulate(rng, n_scenes=60, sparse=True)

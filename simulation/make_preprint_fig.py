@@ -1,4 +1,4 @@
-"""Reliability diagram + error bars for the preprint, from life4d_sim.py (seed 0..9)."""
+"""Reliability diagram + error bars from life4d_sim.py (seed 0..9)."""
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
 import numpy as np

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Life4D real-data pilot on bi-temporal airborne LiDAR change benchmarks (Urb3DCD-v2, AHN-CD).
 
-What it tests (the core claim of the Fellowship, on real or realistic point clouds):
+What it tests (the core claim of Life4D, on real or realistic point clouds):
   Stored geometry from survey A must be judged still valid or not at survey B, when part of B is
   NOT observed (strips not flown / occluded). Methods are compared on held-out scenes:
     1. Overwrite          - B replaces A; cells not observed in B are retired (non-observation = removal)
@@ -19,8 +19,8 @@ Example (Urb3DCD-v2 style):
   python3 life4d_pilot.py --root /data/Urb3DCD-v2 --a-pattern "pc0*" --b-pattern "pc1*" \
       --label-field label_ch --unchanged 0 --transient 7 --out results
 Check the dataset README for the exact file names, label field and class codes; set the flags to match.
-Outputs: results/pilot_results.json, results/pilot_table.tex (preprint), results/pilot_table_c1.tex (C1), (rows for C1 Table 3 / the preprint),
-results/pilot_sentence.tex (one sentence for C1 Section 7 and the preprint).
+Outputs: results/pilot_results.json, results/pilot_table.tex (LaTeX table rows), results/pilot_table_c1.tex (compact rows),
+results/pilot_sentence.tex (a one-sentence summary of the results).
 """
 import argparse, glob, json, os, sys
 import numpy as np
@@ -243,7 +243,7 @@ def main():
         split_txt = "held-out spatial blocks" if a.split == "tiles" else "held-out scenes"
         f.write(f"\\midrule\n\\multicolumn{{5}}{{@{{}}l}}{{\\emph{{Airborne LiDAR pilot: {a.dataset_name}, {len(pairs)} scenes, {split_txt}, {a.seeds} seeds}}}}\\\\\n")
         f.write("\n".join(rows) + "\n")
-    with open(os.path.join(a.out, "pilot_table_c1.tex"), "w") as f:   # compact version for C1 Table 3
+    with open(os.path.join(a.out, "pilot_table_c1.tex"), "w") as f:   # compact version (keep-last and Life4D rows)
         f.write(f"\\midrule\n\\multicolumn{{5}}{{@{{}}l}}{{\\emph{{Airborne LiDAR pilot ({a.dataset_name}, {len(pairs)} scenes, held-out areas)}}}}\\\\\n")
         f.write(rows[1] + "\n" + rows[3] + "\n")
     L = summary["life4d"]["unobserved"]; best_base = max(summary[m]["unobserved"]["capture"] for m in ("overwrite", "last", "presence"))
@@ -252,8 +252,8 @@ def main():
         best_ece = min(summary[m]["all"]["ece"][0] for m in ("overwrite", "last", "presence"))
         f.write(f"On {a.dataset_name} airborne LiDAR ({len(pairs)} test scenes, held-out areas, {a.seeds} seeds), Life4D had the lowest combined error "
                 f"({L_all['combined'][0]:.1f}\\% against {K['combined'][0]:.1f}\\% for keeping the last observation) and the best calibration "
-                f"(ECE {L_all['ece'][0]:.3f} against {best_ece:.3f} for the best baseline), while overwriting wrongly retired "
-                f"{summary['overwrite']['unobserved']['false_ret']:.0f}\\% of still-valid unobserved geometry. Ranking unobserved cells for re-survey "
+                f"(ECE {L_all['ece'][0]:.3f} against {best_ece:.3f} for the best baseline), while overwriting wrongly retired every still-valid "
+                f"unobserved cell ({summary['overwrite']['unobserved']['false_ret']:.0f}\\% of unobserved cells). Ranking unobserved cells for re-survey "
                 f"from two surveys gained only modestly over random choice ({100 * L['capture']:.0f}\\% of changes in the top 20\\%, against 20\\%; AUROC {L['auroc']:.2f}); "
                 f"learning change rates from repeated revisits is what RP2 adds.\n")
     for m, _ in methods:
